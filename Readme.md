@@ -52,8 +52,8 @@ Mac/Linux用户可以直接运行start.sh：
 或者分开运行bot和wechat_client：
 
 ```
-go run wechat_client.go
 python bot.py
+go run wechat_client.go
 ```
 
 ### 注意
