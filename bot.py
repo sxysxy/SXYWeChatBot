@@ -118,7 +118,7 @@ def app_draw():
             else:
                 W = 768
                 H = 768
-                ITS = 50
+                ITS = config_json.get('DefaultDiffutionIterations', 20)
                 NUM_PIC = 1
 
     if W > 2500 or H > 2500:
