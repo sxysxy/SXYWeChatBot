@@ -1,4 +1,3 @@
-from distutils.command.config import config
 import flask
 import requests
 import json
