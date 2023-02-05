@@ -87,6 +87,8 @@ func main() {
 			return
 		}
 
+	//	fmt.Println(msg.Content)
+
 		content := msg.Content
 		if msg.IsSendByGroup() && !msg.IsAt() {
 			return
@@ -96,14 +98,7 @@ func main() {
 			atheader := fmt.Sprintf("@%s", self.NickName)
 			//fmt.Println(atheader)
 			if strings.HasPrefix(content, atheader) {
-				content = strings.TrimLeft(content[len(atheader):], " \t\n")
-				for {
-					if strings.HasPrefix(content, " ") {
-						content = content[1:]
-					} else {
-						break
-					}
-				}
+				content = strings.TrimLeft(content[len(atheader):], "  \t\n")
 			}
 		}
 		//fmt.Println(content)
