@@ -24,7 +24,7 @@
 python3需要再安装这些库，使用pip安装就可以：
 
 ```
-pip install torch flask openai transformers diffusers
+pip install torch flask openai transformers diffusers python-opencv
 ```
 
 当然如果使用cuda加速建议按照<a href="https://pytorch.org">pytorch官网</a>提供的方法安装支持cuda加速的torch版本。
