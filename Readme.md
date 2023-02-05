@@ -119,7 +119,7 @@ ugly face, no nose, pale face, duplicate, blurry, bad, worst, low quality, norma
 ![](examples/exp5.jpg)
 
 ### 使用协议
-<p id="ch22"> </p>
+<p id="ch3"> </p>
 
 1.作者sxysxy依法享有对本软件的软件著作权：非商业使用遵循MIT协议即可（见LICENSE文件），商业使用联系作者，邮箱sxysxygm@gmail.com或1441157749@qq.com。(The author sxysxy is legally entitled to the software copyright: for non-commercial use, please follow the MIT license(see LICENSE file). For commercial use, contact the author at sxysxygm@gmail.com or 1441157749@qq.com)
 
