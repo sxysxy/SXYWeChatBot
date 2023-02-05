@@ -1,0 +1,5 @@
+storage.json
+*.png
+.vscode
+myconf.json
+.DS_Store
