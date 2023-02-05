@@ -1,3 +1,5 @@
+from email.mime import image
+from cv2 import grabCut
 import flask
 import requests
 import json
@@ -25,6 +27,7 @@ class GlobalData:
     context_for_groups = {}
 
     GENERATE_PICTURE_ARG_PAT = re.compile("(\(|（)([0-9]+)[ \n\t]+([0-9]+)[ \n\t]+([0-9]+)(\)|）)")
+    GENERATE_PICTURE_ARG_PAT2 = re.compile("(\(|（)([0-9]+)[ \n\t]+([0-9]+)[ \n\t]+([0-9]+)[ \n\t]+([0-9]+)(\)|）)")
     GENERATE_PICTURE_NEG_PROMPT_DELIMETER = re.compile("\n+")
     GENERATE_PICTURE_MAX_ITS = 200 #最大迭代次数
 
@@ -93,28 +96,37 @@ def app_draw():
         if prompt[i] == ':' or prompt[i] == '：':
             break
     if i == len(prompt):
-        return json.dumps({"user_name" : data["user_name"], "filename" : "", "error" : True, "error_msg" : "格式不对，正确的格式是：生成图片：Prompt 或者 生成图片(宽 高 迭代次数)：Prompt"})
+        return json.dumps({"user_name" : data["user_name"], "filenames" : [], "error" : True, "error_msg" : "格式不对，正确的格式是：生成图片：Prompt 或者 生成图片(宽 高 迭代次数 [图片最大数量(缺省1)])：Prompt"})
     
 
-    match_args = re.match(GlobalData.GENERATE_PICTURE_ARG_PAT, prompt[:i])
+    match_args = re.match(GlobalData.GENERATE_PICTURE_ARG_PAT2, prompt[:i])
     if not match_args is None:
         W = int(match_args.group(2))
         H = int(match_args.group(3))
         ITS = int(match_args.group(4))
-
-        if W > 2000 or H > 2000:
-            return json.dumps({"user_name" : data["user_name"], "filename" : "", "error" : True, "error_msg" : "你要求的图片太大了，我不干了～"})
-        
-        if ITS > GlobalData.GENERATE_PICTURE_MAX_ITS:
-            return json.dumps({"user_name" : data["user_name"], "filename" : "", "error" : True, "error_msg" : f"迭代次数太多了，不要超过{GlobalData.GENERATE_PICTURE_MAX_ITS}次"})
+        NUM_PIC = int(match_args.group(5))
     else:
-        if len(prompt[:i].strip()) != 0:
-            return json.dumps({"user_name" : data["user_name"], "filename" : "", "error" : True, "error_msg" : "格式不对，正确的格式是：生成图片：Prompt 或者 生成图片(宽 高 迭代次数)：Prompt"})
+        match_args = re.match(GlobalData.GENERATE_PICTURE_ARG_PAT, prompt[:i])
+        if not match_args is None:
+            W = int(match_args.group(2))
+            H = int(match_args.group(3))
+            ITS = int(match_args.group(4))
+            NUM_PIC = 1
         else:
-            W = 768
-            H = 768
-            ITS = 50
+            if len(prompt[:i].strip()) != 0:
+                return json.dumps({"user_name" : data["user_name"], "filenames" : [], "error" : True, "error_msg" : "格式不对，正确的格式是：生成图片：Prompt 或者 生成图片(宽 高 迭代次数 [图片最大数量(缺省1)])：Prompt"})
+            else:
+                W = 768
+                H = 768
+                ITS = 50
+                NUM_PIC = 1
+
+    if W > 2500 or H > 2500:
+        return json.dumps({"user_name" : data["user_name"], "filenames" : [], "error" : True, "error_msg" : "你要求的图片太大了，我不干了～"})
     
+    if ITS > GlobalData.GENERATE_PICTURE_MAX_ITS:
+        return json.dumps({"user_name" : data["user_name"], "filenames" : [], "error" : True, "error_msg" : f"迭代次数太多了，不要超过{GlobalData.GENERATE_PICTURE_MAX_ITS}次"})
+
     prompt = prompt[(i+1):].strip()
 
     prompts = re.split(GlobalData.GENERATE_PICTURE_NEG_PROMPT_DELIMETER, prompt)
@@ -124,12 +136,25 @@ def app_draw():
     if len(prompts) > 1:
         neg_prompt = prompts[1]
 
-    print(f"Generating picture with prompt = {prompt} , negative prompt = {neg_prompt}")
+    print(f"Generating {NUM_PIC} picture(s) with prompt = {prompt} , negative prompt = {neg_prompt}")
+    
+    try:
+        if NUM_PIC > 1 and torch.backends.mps.is_available():  #Apple silicon上的bug：https://github.com/huggingface/diffusers/issues/363
+            return json.dumps({"user_name" : data["user_name"], "filenames" : [], "error" : True, 
+                "error_msg" : "单prompt生成多张图像在Apple silicon上无法实现，相关讨论参考https://github.com/huggingface/diffusers/issues/363"})
 
-    image = sd_pipe(prompt=prompt, negative_prompt=neg_prompt, width=W, height=H, num_inference_steps=ITS).images[0]
+        images = sd_pipe(prompt=prompt, negative_prompt=neg_prompt, width=W, height=H, num_inference_steps=ITS, num_images_per_prompt=NUM_PIC).images[:NUM_PIC]
+        if len(images) == 0:
+            return json.dumps({"user_name" : data["user_name"], "filenames" : [], "error" : True, "error_msg" : "没有产生任何图像"})
+        filenames = []
+        for i, img in enumerate(images):
+            img.save(f"latest-{i}.png")
+            filenames.append(f"latest-{i}.png")
+        return json.dumps({"user_name" : data["user_name"], "filenames" : filenames, "error" : False, "error_msg" : ""})        
 
-    image.save("latest.png")
-    return json.dumps({"user_name" : data["user_name"], "filename" : "latest.png", "error" : False, "error_msg" : ""})
+    except Exception as e: 
+        return json.dumps({"user_name" : data["user_name"], "filenames" : [], "error" : True, "error_msg" : str(e)})
+
 
 if __name__ == "__main__":
     #openai.organization = GlobalData.OPENAI_ORGID

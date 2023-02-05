@@ -25,7 +25,7 @@ type SendTextRequest struct {
 
 type SendImageRequest struct {
 	UserName	string  `json:"user_name"`
-	FileName    string  `json:"filename"`
+	FileNames []string  `json:"filenames"`
 	HasError    bool    `json:"error"`
 	ErrorMessage string `json:"error_msg"`
 }
@@ -122,9 +122,11 @@ func main() {
 			if resp.HasError {
 				msg.ReplyText( fmt.Sprintf("生成图片出错啦QwQ，错误信息是：%s", resp.ErrorMessage) )
 			} else {
-				img, _ := os.Open(resp.FileName)
-				defer img.Close()
-				msg.ReplyImage(img)
+				for i := 0; i < len(resp.FileNames); i++ {
+					img, _ := os.Open(resp.FileNames[i])
+					defer img.Close()
+					msg.ReplyImage(img)
+				}
 			}
 
 		} else {
