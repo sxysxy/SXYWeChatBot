@@ -158,6 +158,9 @@ def app_draw():
 
 if __name__ == "__main__":
     #openai.organization = GlobalData.OPENAI_ORGID
+    if len(GlobalData.OPENAI_APIKEY) == 0:
+        raise RuntimeError("Please set your OpenAI API Key in config.json")
+
     openai.api_key = GlobalData.OPENAI_APIKEY
 
     app.run(host="0.0.0.0", port=11111)
