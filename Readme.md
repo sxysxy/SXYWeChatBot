@@ -69,7 +69,7 @@ go run wechat_client.go
 
 第一次运行需要下载Diffusion模型，文件很大，并且从外网下载，需要有比较快速稳定的网络条件。
 
-使用iffusion系列模型生成图片对显存容量的需求很大，在默认开启16位浮点数、768x768分辨率的条件下，迭代20次需要14GB显存（参考：RTX4080仅有12GB显存）。搭载Apple Silicon的Macbook/Mac Studio因为统一内存，有比较好的表现。
+使用Diffusion系列模型生成图片对显存容量的需求很大，在默认开启16位浮点数、768x768分辨率的条件下，迭代20次需要14GB显存（参考：RTX4080仅有12GB显存）。搭载Apple Silicon的Macbook/Mac Studio因为统一内存，有比较好的表现。
 
 Diffusion推荐使用的模型：
 
@@ -140,7 +140,7 @@ low quality, dark, fuzzy, normal quality, ugly, twisted face, scary eyes, sexual
 <tr>
     <td> v1.1 </td>
     <td> 2023.02.07 </td>
-    <td> 1.修改默认的Diffusion模型为andite/anything-v4.0 <br> 2.新增特殊指令“查看机器人信息” <3> 3.新增半精度浮点数开关，并默认开启，减少内存占用 <br> 4.新增内容安全性检查开关 </td>
+    <td> 1.修改默认的Diffusion模型为andite/anything-v4.0 <br> 2.新增特殊指令“查看机器人信息” <br> 3.新增半精度浮点数开关，并默认开启，减少内存占用 <br> 4.新增内容安全性检查开关 </td>
 </tr>
 
 <tr>
