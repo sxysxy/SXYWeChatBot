@@ -35,9 +35,17 @@ type GenerateImageRequest struct {
 	Prompt      string  `json:"prompt"`
 }
 
+type GlobalConfig struct {
+	OpenAIKey   string  `json:"OpenAI-API-Key"`
+	GPTModel    string  `json:"GPT-Model"`
+	DiffusionModel string `json:"Diffusion-Model"`
+	DefaultDiffusionIteration int  `json:"DefaultDiffutionIterations"`
+	UseFP16     bool `json:"UseFP16"`
+}
+
 func HttpPost(url string, data interface{}, timelim int) []byte {
     // 超时时间
-	timeout, _ := time.ParseDuration(fmt.Sprintf("%ss", timelim))
+	timeout, _ := time.ParseDuration(fmt.Sprintf("%ss", timelim))  //是的，这里有个bug，但是这里就是靠这个bug正常运行的！！！？？？
 
     client := &http.Client{Timeout: timeout}
     jsonStr, _ := json.Marshal(data)
@@ -102,8 +110,13 @@ func main() {
 			}
 		}
 		//fmt.Println(content)
+		
+		content = strings.TrimRight(content, "  \t\n")
+		if content == "查看机器人信息" {
+			info := HttpPost("http://localhost:11111/info", nil, 20)
+			msg.ReplyText(string(info))
 
-		if strings.HasPrefix(content, "生成图片") {
+		} else if strings.HasPrefix(content, "生成图片") {
 			// 调用Stable Diffusion 
 			// msg.ReplyText("这个功能还没有实现，可以先期待一下~")
 			sender, _ := msg.Sender()

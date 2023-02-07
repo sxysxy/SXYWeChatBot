@@ -1,13 +1,10 @@
-from email.mime import image
-from cv2 import grabCut
-import flask
-import requests
 import json
 import openai
 import re
-from diffusers import StableDiffusionPipeline, DPMSolverMultistepScheduler
+from diffusers import DiffusionPipeline, StableDiffusionPipeline, DPMSolverMultistepScheduler
 import torch
 import argparse
+import flask
 
 ps = argparse.ArgumentParser()
 ps.add_argument("--config", default="config.json", help="Configuration file")
@@ -32,16 +29,27 @@ class GlobalData:
     GENERATE_PICTURE_MAX_ITS = 200 #最大迭代次数
 
 app = flask.Flask(__name__)
-sd_pipe = StableDiffusionPipeline.from_pretrained(config_json["Diffusion-Model"], torch_dtype=torch.float32)
+
+
+# 这个用于放行生成的任何图片，替换掉默认的NSFW检查器，公共场合慎重使用
+def run_safety_nochecker(image, device, dtype):
+    print("警告：屏蔽了内容安全性检查，可能会产生有害内容")
+    return image, None
+
+sd_args = {
+    "pretrained_model_name_or_path" : config_json["Diffusion-Model"],
+    "torch_dtype" : (torch.float16 if config_json.get("UseFP16", True) else torch.float32)
+}
+
+sd_pipe = StableDiffusionPipeline.from_pretrained(**sd_args)
 sd_pipe.scheduler = DPMSolverMultistepScheduler.from_config(sd_pipe.scheduler.config)
+if config_json["NoNSFWChecker"]:
+    setattr(sd_pipe, "run_safety_checker", run_safety_nochecker)
+
 if torch.backends.mps.is_available():
     sd_pipe = sd_pipe.to("mps")
 elif torch.cuda.is_available():
     sd_pipe = sd_pipe.to("cuda")
-
-def send_text_to_user(user_id : str, text : str):
-    requests.post(url="http://localhost:11110/send_text", 
-        data=json.dumps({"user_id" : user_id, "text" : text, "in_group" : False}))
 
 def call_gpt(prompt : str):
     try:
@@ -155,6 +163,12 @@ def app_draw():
     except Exception as e: 
         return json.dumps({"user_name" : data["user_name"], "filenames" : [], "error" : True, "error_msg" : str(e)})
 
+@app.route("/info", methods=['POST', 'GET'])
+def app_info():
+    return "\n".join([f"GPT模型：{config_json['GPT-Model']}", f"Diffusion模型：{config_json['Diffusion-Model']}",
+     "默认图片规格：768x768 RGB三通道", "Diffusion默认迭代轮数：20",
+      f"使用半精度浮点数 : {'是' if config_json.get('UseFP16', True) else '否'}",
+      f"屏蔽NSFW检查：{'是' if config_json['NoNSFWChecker'] else '否'}"])
 
 if __name__ == "__main__":
     #openai.organization = GlobalData.OPENAI_ORGID

@@ -11,7 +11,9 @@
 ## [机器人使用方法](#ch2)
 ### [例子](#ch21)
 
-## [使用协议](#ch3)
+## [更新日志](#ch3)
+
+## [使用协议](#ch4)
 
 ## 安装配置方法
 <p id="ch1"> </p>
@@ -24,7 +26,7 @@
 python3需要再安装这些库，使用pip安装就可以：
 
 ```
-pip install torch flask openai transformers diffusers python-opencv accelerate
+pip install torch flask openai transformers diffusers accelerate
 ```
 
 当然如果使用cuda加速建议按照<a href="https://pytorch.org">pytorch官网</a>提供的方法安装支持cuda加速的torch版本。
@@ -39,6 +41,10 @@ Apple Silicon的macbook上可以使用mps后端加速，我开发的时候使用
 其余的配置通常按照默认的就可以，或者可以前往OpenAI官网查看其他可用的GPT模型，或者到huggingface上查看其他可用的Stable Diffusion模型。
 
 因为懒省事所以有一些参数是写死在代码里的（坏文明），也是可以调整的，比如超时时间可以在wechat_client.go的代码中修改，这样在生成高分辨率、迭代次数非常多的图片的时候留有更多的时间。总之就是代码太简单了，自己看着改一下就行了（就是作者懒）。还有bot.py运行的时候用WSGI什么的，也就是加两行代码。（懒+1）
+
+UseFP16一般打开就可以了，能显著减少显存需求，并且对画质几乎没有影响。
+
+NoNSFWChecker一般打开就可以了，用于过滤生成含有NSFW内容的图片，被过滤的图片会变为纯黑色。
 
 ### 然后就可以运行了
 <p id="ch13"> </p>
@@ -61,7 +67,16 @@ go run wechat_client.go
 
 第一次运行时候会弹出网页扫码登录微信，登陆一次之后之后再登陆不需要扫码，但仍然需要在手机上点击确认登陆。
 
-第一次运行需要下载Stable Diffusion模型，默认的stabilityai/stable-diffusion-2-1有将近10GB，并且从外网下载，需要有比较快速稳定的网络条件。如果
+第一次运行需要下载Diffusion模型，文件很大，并且从外网下载，需要有比较快速稳定的网络条件。
+
+使用iffusion系列模型生成图片对显存容量的需求很大，在默认开启16位浮点数、768x768分辨率的条件下，迭代20次需要14GB显存（参考：RTX4080仅有12GB显存）。搭载Apple Silicon的Macbook/Mac Studio因为统一内存，有比较好的表现。
+
+Diffusion推荐使用的模型：
+
+```
+andite/anything-v4.0 : 二次元浓度很高，画人的水平不错
+stabilityai/stable-diffusion-2-1 : 比较通用，能生成各种图片，二次元风格真实风格都可以，但是画人的能力很差，经常出现崩坏的手，缺胳膊少腿等问题。。。
+```
 
 bot.py会占用本地11111网络端口，如果发生冲突可以在bot.py中修改这个端口号（没弄配置文件里？没错还是作者懒，要不是作者不想把自己的API Key写代码里开源了，连config.json配置文件都不会有（笑））
 
@@ -107,15 +122,38 @@ bot.py会占用本地11111网络端口，如果发生冲突可以在bot.py中修
 
 ![](examples/exp4.jpg)
 
+下面这个例子使用 andite/anything-v4.0 模型
+
 ```
-生成图片(800 600 100)：(((masterpiece))), best quality, illustration, (beautiful detailed girl), detailed ice, expressionles, azure hair, long hairs, (skyblue dress), detailed cute anime face, white pantyhose
-ugly face, no nose, pale face, duplicate, blurry, bad, worst, low quality, normal quality, jpeg artifacts, cropped, missing fingers, bad hands, bad anatomy, too many fingers, missing arms, cloned face, too many legs
+生成图片(800 720 25):otokonoko,masterpiece, best quality,best qualityc, maid uniform,white hair,very long hair,golden eyes,cat ears,cat tail,smile,long stocks,white stocks,bedroom,(looking at viewer)
+low quality, dark, fuzzy, normal quality, ugly, twisted face, scary eyes, sexual implication
 ```
 
-![](examples/exp5.jpg)
+![](examples/exp6.png)
 
-### 使用协议
+## 更新日志
 <p id="ch3"> </p>
+
+<table>
+<tr> <th>版本</th> <th>日期</th> <th>说明</th>  </tr>
+
+<tr>
+    <td> v1.1 </td>
+    <td> 2023.02.07 </td>
+    <td> 1.修改默认的Diffusion模型为andite/anything-v4.0 <br> 2.新增特殊指令“查看机器人信息” <3> 3.新增半精度浮点数开关，并默认开启，减少内存占用 <br> 4.新增内容安全性检查开关 </td>
+</tr>
+
+<tr>
+    <td> v1.0 </td>
+    <td> 2023.02.05 </td>
+    <td> 初始版本 </td>
+</tr>
+
+
+</table>
+
+## 使用协议
+<p id="ch4"> </p>
 
 1.作者sxysxy依法享有对本软件的软件著作权：非商业使用遵循MIT协议即可（见LICENSE文件），商业使用联系作者，邮箱sxysxygm@gmail.com或1441157749@qq.com。(The author sxysxy is legally entitled to the software copyright: for non-commercial use, please follow the MIT license(see LICENSE file). For commercial use, contact the author at sxysxygm@gmail.com or 1441157749@qq.com)
 

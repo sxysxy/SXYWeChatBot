@@ -1,6 +1,8 @@
 {
     "OpenAI-API-Key" : "",
     "GPT-Model" : "text-davinci-003",
-    "Diffusion-Model" : "stabilityai/stable-diffusion-2-1",
-    "DefaultDiffutionIterations" : 20
+    "Diffusion-Model" : "andite/anything-v4.0",
+    "DefaultDiffutionIterations" : 20,
+    "UseFP16" : true,
+    "NoNSFWChecker" : false
 }
