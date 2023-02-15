@@ -19,9 +19,9 @@
 <p id="ch1"> </p>
 
 ### 依赖
-<p id="ch11> </p>
+<p id="ch11"> </p>
 
-用到了两种编程语言：go和python3。使用go是因为本项目依赖于强力的使用go写成的<a href="https://github.com/eatmoreapple/openwechat">openwechat</a>实现对微信会话的获取以及发送消息的功能。调用ChatGPT以及Stable Diffusion模型则使用python3。
+用到了两种编程语言：go和python3。使用go是因为本项目依赖于强力的使用go写成的<a href="https://github.com/eatmoreapple/openwechat">openwechat</a>（请按照这里配置openwechat的方法安装openwechat）实现对微信会话的获取以及发送消息的功能。调用ChatGPT以及Stable Diffusion模型则使用python3。
 
 python3需要再安装这些库，使用pip安装就可以：
 
