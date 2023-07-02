@@ -59,7 +59,7 @@ def run_safety_nochecker(image, device, dtype):
 
 sd_args = {
     "pretrained_model_name_or_path" : config_json["Diffusion"]["Diffusion-Model"],
-    "torch_dtype" : (torch.float16 if config_json.get("UseFP16", True) else torch.float32)
+    "torch_dtype" : (torch.float16 if config_json["Diffusion"].get("UseFP16", True) else torch.float32)
 }
 
 sd_pipe = StableDiffusionPipeline.from_pretrained(**sd_args)
