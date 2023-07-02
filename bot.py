@@ -231,7 +231,9 @@ def app_info():
     return "\n".join([f"GPT模型：{config_json['OpenAI-GPT']['GPT-Model'] if USE_OPENAIGPT else config_json['ChatGLM']['GPT-Model']}", f"Diffusion模型：{config_json['Diffusion']['Diffusion-Model']}",
      "默认图片规格：768x768 RGB三通道", "Diffusion默认迭代轮数：20",
       f"使用半精度浮点数 : {'是' if config_json['Diffusion'].get('UseFP16', True) else '否'}",
-      f"屏蔽NSFW检查：{'是' if config_json['Diffusion']['NoNSFWChecker'] else '否'}"])
+      f"屏蔽NSFW检查：{'是' if config_json['Diffusion']['NoNSFWChecker'] else '否'}",
+      "清空上下文指令：重置上下文",
+      "生成图片指令：生成图片(宽 高 迭代次数)：正面提示 换行写负面提示，其中(宽 高 迭代次数)和换行写的负面提示都是可以省略的"])
 
 if __name__ == "__main__":
 
