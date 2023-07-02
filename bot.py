@@ -7,6 +7,7 @@ import torch
 import argparse
 import flask
 import typing
+import traceback
 
 ps = argparse.ArgumentParser()
 ps.add_argument("--config", default="config.json", help="Configuration file")
@@ -63,7 +64,7 @@ sd_args = {
 
 sd_pipe = StableDiffusionPipeline.from_pretrained(**sd_args)
 sd_pipe.scheduler = DPMSolverMultistepScheduler.from_config(sd_pipe.scheduler.config)
-if config_json["NoNSFWChecker"]:
+if config_json["Diffusion"]["NoNSFWChecker"]:
     setattr(sd_pipe, "run_safety_checker", run_safety_nochecker)
 
 if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
@@ -88,16 +89,21 @@ def CallOpenAIGPT(prompts : typing.List[str]):
     except openai.InvalidRequestError as e:
         return (GPT_ERROR, e)
     except Exception as e:
-        return (GPT_ERROR, e)
+        traceback.print_exception(e)
+        return (GPT_ERROR, str(e))
     
 def CallChatGLM(msg, history : typing.List[str]):
     try:
-        resp, _ = chatglm_model.chat(chatglm_tokenizer, msg, history)
+        resp, hist = chatglm_model.chat(chatglm_tokenizer, msg, history=history)
+        if isinstance(resp, tuple):
+            resp = resp[0]
         return (GPT_SUCCESS, resp)
     except Exception as e:
-        pass
+        return (GPT_ERROR, str(e))
     
 def add_context(uid : str, is_user : bool, msg : str):
+    if not uid in GlobalData.context_for_users:
+        GlobalData.context_for_users[uid] = []
     if USE_OPENAIGPT:
         GlobalData.context_for_users[uid].append({
             "role" : "system",
@@ -106,6 +112,11 @@ def add_context(uid : str, is_user : bool, msg : str):
         )
     elif USE_CHATGLM:
         GlobalData.context_for_users[uid].append(msg)
+        
+def get_context(uid : str): 
+    if not uid in GlobalData.context_for_users:
+        GlobalData.context_for_users[uid] = []
+    return GlobalData.context_for_users[uid]
     
 
 @app.route("/chat_clear", methods=['POST'])
@@ -126,20 +137,24 @@ def app_chat():
         
     if USE_OPENAIGPT:
         add_context(uid, True, data["text"])
-        prompt = GlobalData.context_for_users[uid]
+        #prompt = GlobalData.context_for_users[uid]
+        prompt = get_context(uid)
         resp = CallOpenAIGPT(prompt=prompt)
         #GlobalData.context_for_users[data["user_id"]] = (prompt + resp)
-        add_context(uid, False, resp)
-        print(f"Prompt = {prompt}\nResponse = {resp}")
+        add_context(uid, False, resp[1])
+        #print(f"Prompt = {prompt}\nResponse = {resp[1]}")
     elif USE_CHATGLM:
-        prompt = GlobalData.context_for_users[uid]
-        resp, _ = CallChatGLM(msg=data["text"], history=prompt)
-        add_context(uid, True, data["text"])
-        add_context(uid, False, resp)
+        #prompt = GlobalData.context_for_users[uid]
+        prompt = get_context(uid)
+        resp = CallChatGLM(msg=data["text"], history=prompt)
+        add_context(uid, True, (data["text"], resp[1]))
     else:
         pass
-
-    return json.dumps({"user_id" : data["user_id"], "text" : resp, "in_group" : False})
+    
+    if resp[0] == GPT_SUCCESS:
+        return json.dumps({"user_id" : data["user_id"], "text" : resp[1], "error" : False, "error_msg" : ""})
+    else:
+        return json.dumps({"user_id" : data["user_id"], "text" : "", "error" : True, "error_msg" : resp[1]})
 
 @app.route("/draw", methods=['POST'])
 def app_draw():

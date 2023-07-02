@@ -26,7 +26,13 @@
 python3需要再安装这些库，使用pip安装就可以：
 
 ```
-pip install torch flask openai transformers diffusers accelerate sentencepiece cpm_kernels 
+pip install torch flask openai transformers diffusers accelerate
+```
+
+如果你要使用ChatGLM，注意torch的版本应该>=2.0，transformers的版本为4.30.2，并且还要安装
+
+```
+pip install gradio mdtex2html sentencepiece cpm_kernels
 ```
 
 当然如果使用cuda加速建议按照<a href="https://pytorch.org">pytorch官网</a>提供的方法安装支持cuda加速的torch版本。
@@ -73,7 +79,7 @@ go run wechat_client.go
 ### 注意
 <p id="ch14"> </p>
 
-第一次运行时候会弹出网页扫码登录微信，登陆一次之后之后再登陆不需要扫码，但仍然需要在手机上点击确认登陆。
+第一次运行时候会弹出网页扫码登录微信，登陆一次之后之后再登陆不需要扫码，但仍然需要在手机上点击确认登陆（这时候go程序会卡住没有任何提示，注意掏出手机确认登录微信）。
 
 第一次运行需要下载Diffusion模型，文件很大，并且从外网下载，需要有比较快速稳定的网络条件。
 

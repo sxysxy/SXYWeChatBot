@@ -12,7 +12,7 @@
         "GPT-Model" : "THUDM/chatglm2-6b"
     },
     "Diffusion" : {
-        "DiffusionModel" : "stabilityai/stable-diffusion-2-1",
+        "Diffusion-Model" : "stabilityai/stable-diffusion-2-1",
         "NoNSFWChecker" : true,
         "UseFP16" : true
     }

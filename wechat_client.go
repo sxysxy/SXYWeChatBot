@@ -23,6 +23,13 @@ type SendTextRequest struct {
 	Text        string  `json:"text"`
 }
 
+type SendTextResponse struct {
+	UserID 		string `json:"user_id"`
+	Text	    string `json:"text"`
+	HasError    bool   `json:"error"`
+	ErrorMessage string `json:"error_msg"`
+}
+
 type SendImageRequest struct {
 	UserName	string  `json:"user_name"`
 	FileNames []string  `json:"filenames"`
@@ -135,7 +142,7 @@ func main() {
 			}
 
 		} else {
-			// 调用ChatGPT
+			// 调用GPT
 
 			sender, _ := msg.Sender()
 			//var group openwechat.Group{} = nil
@@ -155,7 +162,7 @@ func main() {
 				return
 			}
 
-			resp := SendTextRequest{}
+			resp := SendTextResponse{}
 			resp_raw := []byte("")
 
 			if !msg.IsSendByGroup() {
@@ -173,12 +180,22 @@ func main() {
 			if len(resp.Text) == 0 {
 				msg.ReplyText("GPT对此没有什么想说的，换个话题吧。")
 			} else {
-				if msg.IsSendByGroup() {
-					sender_in_group, _ := msg.SenderInGroup()
-					nickname := sender_in_group.NickName
-					msg.ReplyText(fmt.Sprintf("@%s\n%s\n-------------------\n%s", nickname, content, resp.Text))
+				if resp.HasError {
+					if msg.IsSendByGroup() {
+						sender_in_group, _ := msg.SenderInGroup()
+						nickname := sender_in_group.NickName
+						msg.ReplyText(fmt.Sprintf("@%s\n%s\n-------------------\n%s", nickname, content, resp.ErrorMessage))
+					} else {
+						msg.ReplyText(resp.ErrorMessage)
+					}
 				} else {
-					msg.ReplyText(resp.Text)
+					if msg.IsSendByGroup() {
+						sender_in_group, _ := msg.SenderInGroup()
+						nickname := sender_in_group.NickName
+						msg.ReplyText(fmt.Sprintf("@%s\n%s\n-------------------\n%s", nickname, content, resp.Text))
+					} else {
+						msg.ReplyText(resp.Text)
+					}
 				}
 			}
 
