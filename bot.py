@@ -228,7 +228,7 @@ def app_draw():
 
 @app.route("/info", methods=['POST', 'GET'])
 def app_info():
-    return "\n".join([f"GPT模型：{config_json['GPT-Model']}", f"Diffusion模型：{config_json['Diffusion-Model']}",
+    return "\n".join([f"GPT模型：{config_json['OpenAI-GPT']['GPT-Model'] if USE_OPENAIGPT else config_json['ChatGLM']['GPT-Model']}", f"Diffusion模型：{config_json['Diffusion']['Diffusion-Model']}",
      "默认图片规格：768x768 RGB三通道", "Diffusion默认迭代轮数：20",
       f"使用半精度浮点数 : {'是' if config_json['Diffusion'].get('UseFP16', True) else '否'}",
       f"屏蔽NSFW检查：{'是' if config_json['Diffusion']['NoNSFWChecker'] else '否'}"])
