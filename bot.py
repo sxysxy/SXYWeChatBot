@@ -2,9 +2,11 @@ import json
 import openai
 import re
 from diffusers import DiffusionPipeline, StableDiffusionPipeline, DPMSolverMultistepScheduler
+from transformers import AutoTokenizer, AutoModel
 import torch
 import argparse
 import flask
+import typing
 
 ps = argparse.ArgumentParser()
 ps.add_argument("--config", default="config.json", help="Configuration file")
@@ -15,10 +17,12 @@ with open(args.config) as f:
 
 class GlobalData:
    # OPENAI_ORGID = config_json[""]
-    OPENAI_APIKEY = config_json["OpenAI-API-Key"]
-    OPENAI_MODEL = config_json["GPT-Model"]
-    OPENAI_MODEL_TEMPERATURE = 0.66
-    OPENAI_MODEL_MAXTOKENS = 2048
+    OPENAI_APIKEY = config_json["OpenAI-GPT"]["OpenAI-Key"]
+    OPENAI_MODEL = config_json["OpenAI-GPT"]["GPT-Model"]
+    OPENAI_MODEL_TEMPERATURE = int(config_json["OpenAI-GPT"]["Temperature"])
+    OPENAI_MODEL_MAXTOKENS = min(2048, int(config_json["OpenAI-GPT"]["MaxTokens"]))
+    
+    CHATGLM_MODEL = config_json["ChatGLM"]["GPT-Model"]
 
     context_for_users = {}
     context_for_groups = {}
@@ -27,9 +31,25 @@ class GlobalData:
     GENERATE_PICTURE_ARG_PAT2 = re.compile("(\(|（)([0-9]+)[ \n\t]+([0-9]+)[ \n\t]+([0-9]+)[ \n\t]+([0-9]+)(\)|）)")
     GENERATE_PICTURE_NEG_PROMPT_DELIMETER = re.compile("\n+")
     GENERATE_PICTURE_MAX_ITS = 200 #最大迭代次数
-
+    
+USE_OPENAIGPT = False
+USE_CHATGLM = False
+    
+if config_json["OpenAI-GPT"]["Enable"]:
+    print(f"Use OpenAI GPT Model({GlobalData.OPENAI_MODEL}).")
+    USE_OPENAIGPT = True
+elif config_json["ChatGLM"]["Enable"]:
+    print(f"Use ChatGLM({GlobalData.CHATGLM_MODEL}) as GPT-Model.")
+    chatglm_tokenizer = AutoTokenizer.from_pretrained(GlobalData.CHATGLM_MODEL, trust_remote_code=True)
+    chatglm_model = AutoModel.from_pretrained(GlobalData.CHATGLM_MODEL, trust_remote_code=True)
+    if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        chatglm_model = chatglm_model.to('mps')
+    elif torch.cuda.is_available():
+        chatglm_model = chatglm_model.to('cuda')
+    chatglm_model = chatglm_model.eval()
+    USE_CHATGLM = True
+    
 app = flask.Flask(__name__)
-
 
 # 这个用于放行生成的任何图片，替换掉默认的NSFW检查器，公共场合慎重使用
 def run_safety_nochecker(image, device, dtype):
@@ -37,7 +57,7 @@ def run_safety_nochecker(image, device, dtype):
     return image, None
 
 sd_args = {
-    "pretrained_model_name_or_path" : config_json["Diffusion-Model"],
+    "pretrained_model_name_or_path" : config_json["Diffusion"]["Diffusion-Model"],
     "torch_dtype" : (torch.float16 if config_json.get("UseFP16", True) else torch.float32)
 }
 
@@ -46,29 +66,52 @@ sd_pipe.scheduler = DPMSolverMultistepScheduler.from_config(sd_pipe.scheduler.co
 if config_json["NoNSFWChecker"]:
     setattr(sd_pipe, "run_safety_checker", run_safety_nochecker)
 
-if torch.backends.mps.is_available():
+if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
     sd_pipe = sd_pipe.to("mps")
 elif torch.cuda.is_available():
     sd_pipe = sd_pipe.to("cuda")
+    
+GPT_SUCCESS = 0
+GPT_NORESULT = 1
+GPT_ERROR = 2
 
-def call_gpt(prompt : str):
+def CallOpenAIGPT(prompts : typing.List[str]):
     try:
-        res = openai.Completion.create(
-            model=GlobalData.OPENAI_MODEL,
-            prompt=prompt,
-            max_tokens=GlobalData.OPENAI_MODEL_MAXTOKENS,
-            temperature=GlobalData.OPENAI_MODEL_TEMPERATURE)
+        res = openai.ChatCompletion.create(
+            model=config_json["OpenAI-GPT"]["GPT-Model"],
+            messages=prompts
+        )
         if len(res["choices"]) > 0:
-            return res["choices"][0]["text"].strip()
+            return (GPT_SUCCESS, res["choices"][0]["message"]["content"].strip())
         else:
-            return ""
-    except:
-        return "上下文长度超出模型限制，请对我说\“重置上下文\"，然后再试一次"
+            return (GPT_NORESULT, "")
+    except openai.InvalidRequestError as e:
+        return (GPT_ERROR, e)
+    except Exception as e:
+        return (GPT_ERROR, e)
+    
+def CallChatGLM(msg, history : typing.List[str]):
+    try:
+        resp, _ = chatglm_model.chat(chatglm_tokenizer, msg, history)
+        return (GPT_SUCCESS, resp)
+    except Exception as e:
+        pass
+    
+def add_context(uid : str, is_user : bool, msg : str):
+    if USE_OPENAIGPT:
+        GlobalData.context_for_users[uid].append({
+            "role" : "system",
+            "content" : msg   
+        }
+        )
+    elif USE_CHATGLM:
+        GlobalData.context_for_users[uid].append(msg)
+    
 
 @app.route("/chat_clear", methods=['POST'])
 def app_chat_clear():
     data = json.loads(flask.globals.request.get_data())
-    GlobalData.context_for_users[data["user_id"]] = ""
+    GlobalData.context_for_users[data["user_id"]] = []
     print(f"Cleared context for {data['user_id']}")
     return ""
 
@@ -76,20 +119,25 @@ def app_chat_clear():
 def app_chat():
     data = json.loads(flask.globals.request.get_data())
     #print(data)
-    prompt = GlobalData.context_for_users.get(data["user_id"], "")
+    uid = data["user_id"]
 
     if not data["text"][-1] in ['?', '？', '.', '。', ',', '，', '!', '！']:
         data["text"] += "。"
-
-    prompt += "\n" + data["text"]
-
-    if len(prompt) > 4000:
-        prompt = prompt[:4000]
-
-    resp = call_gpt(prompt=prompt)
-    GlobalData.context_for_users[data["user_id"]] = (prompt + resp)
-
-    print(f"Prompt = {prompt}\nResponse = {resp}")
+        
+    if USE_OPENAIGPT:
+        add_context(uid, True, data["text"])
+        prompt = GlobalData.context_for_users[uid]
+        resp = CallOpenAIGPT(prompt=prompt)
+        #GlobalData.context_for_users[data["user_id"]] = (prompt + resp)
+        add_context(uid, False, resp)
+        print(f"Prompt = {prompt}\nResponse = {resp}")
+    elif USE_CHATGLM:
+        prompt = GlobalData.context_for_users[uid]
+        resp, _ = CallChatGLM(msg=data["text"], history=prompt)
+        add_context(uid, True, data["text"])
+        add_context(uid, False, resp)
+    else:
+        pass
 
     return json.dumps({"user_id" : data["user_id"], "text" : resp, "in_group" : False})
 
@@ -167,14 +215,12 @@ def app_draw():
 def app_info():
     return "\n".join([f"GPT模型：{config_json['GPT-Model']}", f"Diffusion模型：{config_json['Diffusion-Model']}",
      "默认图片规格：768x768 RGB三通道", "Diffusion默认迭代轮数：20",
-      f"使用半精度浮点数 : {'是' if config_json.get('UseFP16', True) else '否'}",
-      f"屏蔽NSFW检查：{'是' if config_json['NoNSFWChecker'] else '否'}"])
+      f"使用半精度浮点数 : {'是' if config_json['Diffusion'].get('UseFP16', True) else '否'}",
+      f"屏蔽NSFW检查：{'是' if config_json['Diffusion']['NoNSFWChecker'] else '否'}"])
 
 if __name__ == "__main__":
-    #openai.organization = GlobalData.OPENAI_ORGID
-    if len(GlobalData.OPENAI_APIKEY) == 0:
-        raise RuntimeError("Please set your OpenAI API Key in config.json")
 
-    openai.api_key = GlobalData.OPENAI_APIKEY
+    if USE_OPENAIGPT:
+        openai.api_key = GlobalData.OPENAI_APIKEY
 
     app.run(host="0.0.0.0", port=11111)

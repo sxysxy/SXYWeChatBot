@@ -26,7 +26,7 @@
 python3需要再安装这些库，使用pip安装就可以：
 
 ```
-pip install torch flask openai transformers diffusers accelerate
+pip install torch flask openai transformers diffusers accelerate sentencepiece cpm_kernels 
 ```
 
 当然如果使用cuda加速建议按照<a href="https://pytorch.org">pytorch官网</a>提供的方法安装支持cuda加速的torch版本。
@@ -36,11 +36,19 @@ Apple Silicon的macbook上可以使用mps后端加速，我开发的时候使用
 ### 修改配置
 <p id="ch12"> </p>
 
-你需要有一个OpenAI账号，然后将API Key写到config.json的OpenAI-API-Key字段后，然后保存。
+打开config.json进行修改
 
-其余的配置通常按照默认的就可以，或者可以前往OpenAI官网查看其他可用的GPT模型，或者到huggingface上查看其他可用的Stable Diffusion模型。
+如果你使用OpenAI的GPT：
+
+默认的配置文件就是使用OpenAI的GPT的，你需要有一个OpenAI账号，然后将API Key写到config.json的OpenAI-API-Key字段后，然后保存。其余的配置通常按照默认的就可以，或者可以前往OpenAI官网查看其他可用的GPT模型，
+
+如果你使用ChatGLM:
+
+先把OpenAI-GPT的Enable改为false，然后再把ChatGLM的Enable改为true即可。
 
 因为懒省事所以有一些参数是写死在代码里的（坏文明），也是可以调整的，比如超时时间可以在wechat_client.go的代码中修改，这样在生成高分辨率、迭代次数非常多的图片的时候留有更多的时间。总之就是代码太简单了，自己看着改一下就行了（就是作者懒）。还有bot.py运行的时候用WSGI什么的，也就是加两行代码。（懒+1）
+
+关于Diffusion模型：
 
 UseFP16一般打开就可以了，能显著减少显存需求，并且对画质几乎没有影响。
 
@@ -74,7 +82,7 @@ go run wechat_client.go
 Diffusion推荐使用的模型：
 
 ```
-andite/anything-v4.0 : 二次元浓度很高，画人的水平不错
+andite/anything-v4.0 : 二次元浓度很高，画人的水平不错。（目前在huggingface上该模型已被删除，如果有本地缓存的话还能找到）
 stabilityai/stable-diffusion-2-1 : 比较通用，能生成各种图片，二次元风格真实风格都可以，但是画人的能力很差，经常出现崩坏的手，缺胳膊少腿等问题。。。
 ```
 
@@ -136,6 +144,13 @@ low quality, dark, fuzzy, normal quality, ugly, twisted face, scary eyes, sexual
 
 <table>
 <tr> <th>版本</th> <th>日期</th> <th>说明</th>  </tr>
+
+<tr>
+    <td> v1.2 </td>
+    <td> 2023.07.02 </td>
+    <td> 跟进OpenAI的更新，使用openai.ChatCompletion对话API而不是文本补全API <br> 支持清华大学的开源的<a href="https://github.com/THUDM/ChatGLM2-6B">ChatGLM2</a>作为GPT模型。<br>由于anything-v4.0模型在hunggingface上被删除，默认的Diffusion模型改为stabilityai/stable-diffusion-2-1 <br> 更新了所依赖的openwechat的版本到v1.4.3 </td>
+
+</tr>
 
 <tr>
     <td> v1.1 </td>

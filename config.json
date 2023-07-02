@@ -1,8 +1,19 @@
 {
-    "OpenAI-API-Key" : "",
-    "GPT-Model" : "text-davinci-003",
-    "Diffusion-Model" : "andite/anything-v4.0",
-    "DefaultDiffutionIterations" : 20,
-    "UseFP16" : true,
-    "NoNSFWChecker" : false
+    "OpenAI-GPT" : {
+        "Enable" : true,
+        "OpenAI-Key" : "Please write your openai api key",
+        "GPT-Model" : "gpt-3.5-turbo-0301",
+        "Temperature" : 0.7,
+        "MaxPromptTokens" : 2560,
+        "MaxTokens" : 4096
+    },
+    "ChatGLM" : {
+        "Enable" : false,
+        "GPT-Model" : "THUDM/chatglm2-6b"
+    },
+    "Diffusion" : {
+        "DiffusionModel" : "stabilityai/stable-diffusion-2-1",
+        "NoNSFWChecker" : true,
+        "UseFP16" : true
+    }
 }

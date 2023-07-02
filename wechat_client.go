@@ -35,14 +35,6 @@ type GenerateImageRequest struct {
 	Prompt      string  `json:"prompt"`
 }
 
-type GlobalConfig struct {
-	OpenAIKey   string  `json:"OpenAI-API-Key"`
-	GPTModel    string  `json:"GPT-Model"`
-	DiffusionModel string `json:"Diffusion-Model"`
-	DefaultDiffusionIteration int  `json:"DefaultDiffutionIterations"`
-	UseFP16     bool `json:"UseFP16"`
-}
-
 func HttpPost(url string, data interface{}, timelim int) []byte {
     // 超时时间
 	timeout, _ := time.ParseDuration(fmt.Sprintf("%ss", timelim))  //是的，这里有个bug，但是这里就是靠这个bug正常运行的！！！？？？
